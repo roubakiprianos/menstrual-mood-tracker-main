@@ -214,6 +214,174 @@ def get_insights(df):
 
     return insights
 
+def get_period_fact_of_day():
+    """Returns a period fact based on the current day."""
+    from datetime import date
+
+    facts = [
+        {
+            'fact': "The average menstrual cycle lasts 28 days, but anywhere from 21 to 35 days is considered normal.",
+            'icon': '📅',
+            'tip': 'Track your cycle to understand your unique pattern!'
+        },
+        {
+            'fact': "Period blood isn't actually just blood - it's a mix of blood, tissue from the uterine lining, and vaginal secretions.",
+            'icon': '🔬',
+            'tip': 'Changes in color and consistency are usually normal.'
+        },
+        {
+            'fact': "You lose about 2-3 tablespoons of blood during your entire period, though it can feel like much more!",
+            'icon': '💧',
+            'tip': 'Heavy bleeding (more than 80ml) should be discussed with a doctor.'
+        },
+        {
+            'fact': "Period cramps happen because your uterus contracts to shed its lining. Prostaglandins are the chemicals responsible.",
+            'icon': '💪',
+            'tip': 'Heat, exercise, and anti-inflammatory medications can help!'
+        },
+        {
+            'fact': "Your metabolism can increase slightly during your period, which is why you might feel hungrier!",
+            'icon': '🍽️',
+            'tip': 'Listen to your body and nourish it with what it needs.'
+        },
+        {
+            'fact': "PMS symptoms can start up to 2 weeks before your period and affect up to 90% of menstruating people.",
+            'icon': '🧠',
+            'tip': 'Tracking your symptoms can help you prepare and cope better.'
+        },
+        {
+            'fact': "Exercise during your period can actually help reduce cramps and improve your mood through endorphin release.",
+            'icon': '🏃‍♀️',
+            'tip': 'Even gentle movement like walking or stretching counts!'
+        },
+        {
+            'fact': "The first day of your period is considered Day 1 of your menstrual cycle.",
+            'icon': '🌟',
+            'tip': 'This is when hormones are at their lowest before starting to rise again.'
+        },
+        {
+            'fact': "Chocolate cravings during your period are real! Your body needs more magnesium, and chocolate is rich in it.",
+            'icon': '🍫',
+            'tip': 'Dark chocolate is a great source of magnesium and iron.'
+        },
+        {
+            'fact': "Your sense of smell can be heightened during certain phases of your menstrual cycle.",
+            'icon': '👃',
+            'tip': 'This is linked to hormonal changes throughout your cycle.'
+        },
+        {
+            'fact': "Period pain that interferes with daily activities could be a sign of endometriosis or other conditions.",
+            'icon': '⚠️',
+            'tip': 'Don\'t ignore severe pain - consult a healthcare provider.'
+        },
+        {
+            'fact': "Your period can affect your sleep quality due to hormonal fluctuations, especially progesterone levels.",
+            'icon': '😴',
+            'tip': 'Prioritize rest and maintain good sleep hygiene during your cycle.'
+        },
+        {
+            'fact': "The menstrual cycle is divided into 4 phases: menstruation, follicular, ovulation, and luteal.",
+            'icon': '🔄',
+            'tip': 'Each phase has unique hormonal patterns and potential mood effects.'
+        },
+        {
+            'fact': "Stress can affect your menstrual cycle, potentially causing it to be late, early, or skipped entirely.",
+            'icon': '🧘‍♀️',
+            'tip': 'Stress management techniques can help regulate your cycle.'
+        },
+        {
+            'fact': "Period products have evolved significantly - from pads and tampons to menstrual cups and period underwear!",
+            'icon': '🌸',
+            'tip': 'Find what works best for your body and lifestyle.'
+        },
+        {
+            'fact': "Your energy levels naturally fluctuate throughout your cycle - it's not just in your head!",
+            'icon': '⚡',
+            'tip': 'Plan important tasks during your high-energy phases when possible.'
+        },
+        {
+            'fact': "The color of your period blood can tell you things about your health - bright red is fresh, dark is older blood.",
+            'icon': '🎨',
+            'tip': 'Very pale or gray discharge should be checked by a doctor.'
+        },
+        {
+            'fact': "You can still get pregnant during your period, though it's less likely. Ovulation timing varies!",
+            'icon': '💡',
+            'tip': 'Use contraception consistently if pregnancy prevention is important.'
+        },
+        {
+            'fact': "Orgasms can help relieve menstrual cramps by releasing endorphins and relaxing the uterine muscles.",
+            'icon': '💕',
+            'tip': 'Self-care comes in many forms - do what feels right for you!'
+        },
+        {
+            'fact': "The average person will menstruate for about 7 years of their lifetime!",
+            'icon': '⏰',
+            'tip': 'That\'s why understanding and tracking your cycle is so valuable.'
+        },
+        {
+            'fact': "Hydration is extra important during your period - it can help reduce bloating and headaches.",
+            'icon': '💦',
+            'tip': 'Aim for at least 8 glasses of water throughout the day.'
+        },
+        {
+            'fact': "Iron levels can drop during menstruation due to blood loss, which may cause fatigue.",
+            'icon': '🥬',
+            'tip': 'Eat iron-rich foods like leafy greens, beans, and lean meats.'
+        },
+        {
+            'fact': "Period apps and trackers can help predict your next period and identify patterns in your cycle.",
+            'icon': '📱',
+            'tip': 'You\'re already doing this - great job taking charge of your health!'
+        },
+        {
+            'fact': "Hormonal birth control works by preventing ovulation, which is why some people don't get periods on it.",
+            'icon': '💊',
+            'tip': 'Talk to your doctor about what\'s right for your body.'
+        },
+        {
+            'fact': "Mood changes during your cycle are linked to fluctuating levels of estrogen and progesterone.",
+            'icon': '🎭',
+            'tip': 'Tracking your moods can help you understand and prepare for these changes.'
+        },
+        {
+            'fact': "Ancient cultures celebrated menstruation as a sign of fertility and feminine power.",
+            'icon': '🏛️',
+            'tip': 'Your body is capable of amazing things!'
+        },
+        {
+            'fact': "The word 'menstruation' comes from Latin 'mensis' meaning 'month' - linked to lunar cycles.",
+            'icon': '🌙',
+            'tip': 'Many cultures have connected menstrual cycles to moon phases.'
+        },
+        {
+            'fact': "Everyone's period is different - what's normal for you might not be normal for someone else.",
+            'icon': '✨',
+            'tip': 'Trust your body and speak up if something feels wrong.'
+        },
+        {
+            'fact': "Fiber-rich foods can help with period symptoms by regulating hormones and reducing bloating.",
+            'icon': '🥦',
+            'tip': 'Include whole grains, fruits, and vegetables in your diet.'
+        },
+        {
+            'fact': "Your pain tolerance can actually decrease during menstruation due to hormonal changes.",
+            'icon': '🌡️',
+            'tip': 'Be extra gentle with yourself during this time.'
+        },
+        {
+            'fact': "Regular exercise can help regulate your menstrual cycle and reduce PMS symptoms.",
+            'icon': '🤸‍♀️',
+            'tip': 'Find activities you enjoy to make it sustainable long-term.'
+        }
+    ]
+
+    # Use day of year to get consistent fact for the day
+    day_of_year = date.today().timetuple().tm_yday
+    fact_index = day_of_year % len(facts)
+
+    return facts[fact_index]
+
 def load_user_history(conn, user_id):
     """Loads all historical data for the logged-in user."""
     query = "SELECT * FROM journal_entries WHERE user_id = %s ORDER BY entry_date DESC;"
@@ -441,6 +609,16 @@ if st.session_state.get("authentication_status"):
 
     # --- UI Elements for Logged-in User ---
     authenticator.logout('Logout', 'sidebar')
+
+    # Sidebar header with decorative elements
+    st.sidebar.markdown("""
+    <div style='text-align: center; padding: 1rem 0; background: linear-gradient(135deg, #FFB366 0%, #FF6B35 100%);
+                border-radius: 10px; margin-bottom: 1rem;'>
+        <h2 style='color: white; margin: 0; font-size: 1.5rem;'>🌸</h2>
+        <p style='color: white; margin: 0.5rem 0 0 0; font-size: 0.9rem;'>Cycle Tracker</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.sidebar.markdown(f"### 👋 Welcome, {st.session_state['name']}!")
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 📊 Quick Stats")
@@ -484,6 +662,27 @@ if st.session_state.get("authentication_status"):
         <p style='font-size: 1.1rem; color: #5D4E60; margin: 0; line-height: 1.7; font-weight: 500;'>
             Track your mood and symptoms during your cycle to understand patterns over time ✨
         </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Display Fact of the Day
+    fact_data = get_period_fact_of_day()
+    st.markdown(f"""
+    <div style='background: linear-gradient(135deg, #E8F5E9 0%, #FCE4EC 100%);
+                padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem;
+                border-left: 6px solid #FF6B35; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+        <h3 style='color: #FF6B35; margin-top: 0; font-size: 1.3rem;'>
+            {fact_data['icon']} Did You Know? - Fact of the Day
+        </h3>
+        <p style='font-size: 1.05rem; color: #2D3436; line-height: 1.8; margin: 0.8rem 0;'>
+            <strong>{fact_data['fact']}</strong>
+        </p>
+        <div style='background: rgba(255,255,255,0.7); padding: 0.8rem;
+                    border-radius: 8px; margin-top: 1rem;'>
+            <p style='margin: 0; color: #7B68EE; font-weight: 500;'>
+                💡 <em>{fact_data['tip']}</em>
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
