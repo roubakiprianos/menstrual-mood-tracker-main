@@ -1,0 +1,14 @@
+cookie:
+  expiry_days: 30
+  key: 'SOME_VERY_LONG_AND_RANDOM_SECRET_KEY'
+  name: 'menstrual_tracker_cookie'
+credentials:
+  usernames:
+    rouba_user:
+      email: rouba@example.com
+      name: Rouba
+      password: password123
+    guest_user:
+      email: guest@app.com
+      name: Guest
+      password: guest123
