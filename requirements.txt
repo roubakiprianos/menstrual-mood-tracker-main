@@ -4,5 +4,5 @@ plotly
 transformers
 torch
 streamlit-authenticator
-pyyaml  # The library needed for the config.yaml file
-psycopg2-binary # Needed for PostgreSQL connection
+pyyaml
+psycopg2-binary

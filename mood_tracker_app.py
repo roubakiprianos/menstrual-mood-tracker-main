@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from transformers.pipelines import pipeline
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
@@ -9,6 +8,16 @@ import psycopg2
 from psycopg2 import sql
 import datetime
 import warnings
+
+# Import pipeline with error handling
+try:
+    from transformers import pipeline
+except ImportError:
+    try:
+        from transformers.pipelines import pipeline
+    except ImportError as e:
+        st.error(f"Failed to import transformers: {e}")
+        st.stop()
 
 # Must be the first Streamlit command
 st.set_page_config(
