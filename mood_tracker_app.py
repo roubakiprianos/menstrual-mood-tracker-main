@@ -27,15 +27,23 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 # 1. CONFIGURATION AND AUTHENTICATION SETUP
 # =======================================================
 
-# --- Load Authentication Configuration from config.yaml ---
+# --- Load Authentication Configuration from config.yaml or secrets ---
 try:
-    with open('config.yaml') as file:
-        config = yaml.load(file, Loader=SafeLoader)
+    # Try to load from Streamlit secrets first (for cloud deployment)
+    if "credentials" in st.secrets:
+        config = {
+            'credentials': st.secrets["credentials"].to_dict(),
+            'cookie': st.secrets["cookie"].to_dict()
+        }
+    else:
+        # Fall back to config.yaml for local development
+        with open('config.yaml') as file:
+            config = yaml.load(file, Loader=SafeLoader)
 except FileNotFoundError:
     st.error("Configuration file (config.yaml) not found. Please create it.")
     st.stop()
 except Exception as e:
-    st.error(f"Error loading config.yaml: {e}")
+    st.error(f"Error loading configuration: {e}")
     st.stop()
 
 # --- Initialize Authenticator ---
