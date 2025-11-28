@@ -554,6 +554,30 @@ def delete_all_user_entries(conn, user_id):
         conn.rollback()
         return False, str(e)
 
+def delete_user_account(conn, username):
+    """Permanently deletes a user account and all associated data."""
+    try:
+        with conn.cursor() as cur:
+            # First delete all journal entries
+            delete_entries_query = "DELETE FROM journal_entries WHERE user_id = %s;"
+            cur.execute(delete_entries_query, [username])
+            entries_deleted = cur.rowcount
+
+            # Then delete the user account
+            delete_user_query = "DELETE FROM users WHERE username = %s;"
+            cur.execute(delete_user_query, [username])
+            user_deleted = cur.rowcount
+
+            conn.commit()
+
+        if user_deleted > 0:
+            return True, f"Account deleted successfully. {entries_deleted} journal entries removed."
+        else:
+            return False, "User not found in database."
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
+
 # =======================================================
 # INITIALIZE DATABASE AND LOAD USERS
 # =======================================================
@@ -1042,6 +1066,53 @@ if st.session_state.get("authentication_status"):
                     st.rerun()
                 else:
                     st.error(f"❌ Error deleting entries: {result}")
+
+    with st.sidebar.expander("⚠️ Delete Account"):
+        st.error("🚨 DANGER ZONE")
+        st.warning("⚠️ This will permanently delete your entire account including all journal entries, personal data, and settings. This action CANNOT be undone!")
+
+        st.markdown("---")
+        st.markdown("**Before you proceed:**")
+        st.markdown("- All your journal entries will be lost forever")
+        st.markdown("- Your account will be completely removed from the system")
+        st.markdown("- You will need to create a new account to use the app again")
+
+        st.markdown("---")
+
+        # Confirmation checkbox
+        confirm_delete_account = st.checkbox("I understand this action is permanent and cannot be reversed")
+
+        # Additional text input for extra confirmation
+        username_confirmation = st.text_input(
+            "Type your username to confirm:",
+            key="username_confirm",
+            placeholder=st.session_state['username']
+        )
+
+        # Check if username matches
+        username_matches = username_confirmation == st.session_state['username']
+
+        if st.button(
+            "🔴 PERMANENTLY DELETE ACCOUNT",
+            disabled=not (confirm_delete_account and username_matches),
+            type="secondary",
+            key="delete_account_button"
+        ):
+            if confirm_delete_account and username_matches:
+                success, message = delete_user_account(conn, st.session_state['username'])
+                if success:
+                    st.success(f"✅ {message}")
+                    st.info("👋 Your account has been deleted. Logging you out...")
+                    # Clear all session state
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.balloons()
+                    # Wait a moment then rerun to show login screen
+                    import time
+                    time.sleep(2)
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error deleting account: {message}")
 
     # --- App Structure ---
     st.title("🌸 Menstrual Mood Tracker")
