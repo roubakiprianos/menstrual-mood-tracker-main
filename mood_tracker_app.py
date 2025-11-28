@@ -167,7 +167,17 @@ def create_table_if_not_exists(conn):
         fear_score NUMERIC,
         surprise_score NUMERIC,
         disgust_score NUMERIC,
-        neutral_score NUMERIC
+        neutral_score NUMERIC,
+        symptom_cramps BOOLEAN DEFAULT FALSE,
+        symptom_headache BOOLEAN DEFAULT FALSE,
+        symptom_bloating BOOLEAN DEFAULT FALSE,
+        symptom_fatigue BOOLEAN DEFAULT FALSE,
+        symptom_acne BOOLEAN DEFAULT FALSE,
+        symptom_back_pain BOOLEAN DEFAULT FALSE,
+        symptom_nausea BOOLEAN DEFAULT FALSE,
+        symptom_breast_tenderness BOOLEAN DEFAULT FALSE,
+        symptom_mood_swings BOOLEAN DEFAULT FALSE,
+        symptom_insomnia BOOLEAN DEFAULT FALSE
     );
     """
 
@@ -197,10 +207,34 @@ def create_table_if_not_exists(conn):
     END $$;
     """
 
+    # Add symptom columns if they don't exist (for existing tables)
+    ADD_SYMPTOM_COLUMNS_SQL = """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='journal_entries' AND column_name='symptom_cramps'
+        ) THEN
+            ALTER TABLE journal_entries
+            ADD COLUMN symptom_cramps BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_headache BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_bloating BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_fatigue BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_acne BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_back_pain BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_nausea BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_breast_tenderness BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_mood_swings BOOLEAN DEFAULT FALSE,
+            ADD COLUMN symptom_insomnia BOOLEAN DEFAULT FALSE;
+        END IF;
+    END $$;
+    """
+
     with conn.cursor() as cur:
         cur.execute(CREATE_JOURNAL_TABLE_SQL)
         cur.execute(CREATE_USERS_TABLE_SQL)
         cur.execute(ADD_COUNTRY_COLUMN_SQL)
+        cur.execute(ADD_SYMPTOM_COLUMNS_SQL)
         conn.commit()
 
 def register_user(conn, username, email, name, password_hash, country=None):
@@ -488,7 +522,9 @@ def load_user_history(conn, user_id):
         df = pd.read_sql(query, conn, params=[user_id])
         df.columns = [
             'id', 'User ID', 'Date', 'Period Day', 'Summary', 'Emotion Label', 'Confidence Score',
-            'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score'
+            'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score',
+            'Symptom_Cramps', 'Symptom_Headache', 'Symptom_Bloating', 'Symptom_Fatigue', 'Symptom_Acne',
+            'Symptom_Back_Pain', 'Symptom_Nausea', 'Symptom_Breast_Tenderness', 'Symptom_Mood_Swings', 'Symptom_Insomnia'
         ]
         # Ensure correct data types and format datetime
         df['Date'] = pd.to_datetime(df['Date'])
@@ -500,7 +536,9 @@ def load_user_history(conn, user_id):
         st.warning(f"No history found or error loading data. Start logging! ({e})")
         return pd.DataFrame(columns=[
             'Date', 'Period Day', 'Summary', 'Emotion Label', 'Confidence Score',
-            'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score'
+            'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score',
+            'Symptom_Cramps', 'Symptom_Headache', 'Symptom_Bloating', 'Symptom_Fatigue', 'Symptom_Acne',
+            'Symptom_Back_Pain', 'Symptom_Nausea', 'Symptom_Breast_Tenderness', 'Symptom_Mood_Swings', 'Symptom_Insomnia'
         ])
 
 def delete_all_user_entries(conn, user_id):
@@ -997,7 +1035,9 @@ if st.session_state.get("authentication_status"):
                     # Clear session state to reload empty data
                     st.session_state.history_df = pd.DataFrame(columns=[
                         'Date', 'Period Day', 'Summary', 'Emotion Label', 'Confidence Score',
-                        'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score'
+                        'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score',
+                        'Symptom_Cramps', 'Symptom_Headache', 'Symptom_Bloating', 'Symptom_Fatigue', 'Symptom_Acne',
+                        'Symptom_Back_Pain', 'Symptom_Nausea', 'Symptom_Breast_Tenderness', 'Symptom_Mood_Swings', 'Symptom_Insomnia'
                     ])
                     st.rerun()
                 else:
@@ -1203,6 +1243,29 @@ if st.session_state.get("authentication_status"):
             help="Write 2-3 sentences about how you're feeling"
         )
 
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 🩺 Track Your Symptoms (Optional)")
+        st.caption("Select any symptoms you're experiencing today")
+
+        # Create 3 columns for symptom checkboxes
+        col_s1, col_s2, col_s3 = st.columns(3)
+
+        with col_s1:
+            symptom_cramps = st.checkbox("🩹 Cramps")
+            symptom_headache = st.checkbox("🤕 Headache")
+            symptom_bloating = st.checkbox("🎈 Bloating")
+            symptom_fatigue = st.checkbox("😴 Fatigue")
+
+        with col_s2:
+            symptom_acne = st.checkbox("✨ Acne/Breakouts")
+            symptom_back_pain = st.checkbox("🔙 Back Pain")
+            symptom_nausea = st.checkbox("🤢 Nausea")
+            symptom_breast_tenderness = st.checkbox("💗 Breast Tenderness")
+
+        with col_s3:
+            symptom_mood_swings = st.checkbox("🎭 Mood Swings")
+            symptom_insomnia = st.checkbox("😵 Insomnia")
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             submit_button = st.form_submit_button(label='✨ Analyze and Save Entry', use_container_width=True)
@@ -1232,24 +1295,28 @@ if st.session_state.get("authentication_status"):
         try:
             with conn.cursor() as cur:
                 INSERT_SQL = """
-                INSERT INTO journal_entries 
-                (user_id, entry_date, period_day, summary, emotion_label, confidence_score, 
-                 joy_score, sadness_score, anger_score, fear_score, surprise_score, disgust_score, neutral_score) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO journal_entries
+                (user_id, entry_date, period_day, summary, emotion_label, confidence_score,
+                 joy_score, sadness_score, anger_score, fear_score, surprise_score, disgust_score, neutral_score,
+                 symptom_cramps, symptom_headache, symptom_bloating, symptom_fatigue, symptom_acne,
+                 symptom_back_pain, symptom_nausea, symptom_breast_tenderness, symptom_mood_swings, symptom_insomnia)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """
-                
+
                 data = (
                     st.session_state['username'],
                     log_datetime,
-                    period_day, 
-                    user_summary, 
-                    emotion_label, 
+                    period_day,
+                    user_summary,
+                    emotion_label,
                     confidence_score,
-                    entry_dict['Joy_Score'], entry_dict['Sadness_Score'], entry_dict['Anger_Score'], 
-                    entry_dict['Fear_Score'], entry_dict['Surprise_Score'], entry_dict['Disgust_Score'], 
-                    entry_dict['Neutral_Score']
+                    entry_dict['Joy_Score'], entry_dict['Sadness_Score'], entry_dict['Anger_Score'],
+                    entry_dict['Fear_Score'], entry_dict['Surprise_Score'], entry_dict['Disgust_Score'],
+                    entry_dict['Neutral_Score'],
+                    symptom_cramps, symptom_headache, symptom_bloating, symptom_fatigue, symptom_acne,
+                    symptom_back_pain, symptom_nausea, symptom_breast_tenderness, symptom_mood_swings, symptom_insomnia
                 )
-                
+
                 cur.execute(INSERT_SQL, data)
                 conn.commit()
             
@@ -1423,6 +1490,93 @@ if st.session_state.get("authentication_status"):
         else:
             st.info("Log at least two entries with different cycle days to see pattern comparisons.")
 
+        # --- Symptom Tracking Visualization ---
+        st.markdown("---")
+        st.header("🩺 Symptom Patterns by Cycle Day")
+
+        symptom_cols = [
+            'Symptom_Cramps', 'Symptom_Headache', 'Symptom_Bloating', 'Symptom_Fatigue', 'Symptom_Acne',
+            'Symptom_Back_Pain', 'Symptom_Nausea', 'Symptom_Breast_Tenderness', 'Symptom_Mood_Swings', 'Symptom_Insomnia'
+        ]
+
+        # Check if symptom columns exist and we have symptom data
+        if all(col in st.session_state.history_df.columns for col in symptom_cols):
+            # Calculate symptom frequency by cycle day
+            symptom_data = plot_df[['Period Day'] + symptom_cols].copy()
+
+            # Convert boolean to int for counting
+            for col in symptom_cols:
+                symptom_data[col] = symptom_data[col].astype(int)
+
+            # Group by period day and sum symptoms
+            symptom_by_day = symptom_data.groupby('Period Day')[symptom_cols].sum().reset_index()
+
+            # Check if there are any symptoms logged
+            if symptom_by_day[symptom_cols].sum().sum() > 0:
+                # Melt the data for plotting
+                symptom_melted = symptom_by_day.melt(
+                    id_vars=['Period Day'],
+                    value_vars=symptom_cols,
+                    var_name='Symptom',
+                    value_name='Frequency'
+                )
+
+                # Clean up symptom names for display
+                symptom_melted['Symptom'] = symptom_melted['Symptom'].str.replace('Symptom_', '').str.replace('_', ' ')
+
+                # Create grouped bar chart
+                fig_symptoms = px.bar(
+                    symptom_melted,
+                    x='Period Day',
+                    y='Frequency',
+                    color='Symptom',
+                    barmode='group',
+                    title='Symptom Frequency Throughout Your Cycle 🩺',
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+
+                fig_symptoms.update_layout(
+                    legend_title_text='Symptom Type',
+                    xaxis_title="Day of Menstruation",
+                    yaxis_title="Number of Times Reported",
+                    plot_bgcolor='#FFF9F5',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(size=13, color='#5D4E60'),
+                    title_font=dict(size=19, color='#7B68EE', family='Arial'),
+                    legend=dict(
+                        bgcolor='#FFFFFF',
+                        bordercolor='#FFB366',
+                        borderwidth=2
+                    ),
+                    xaxis=dict(dtick=1)
+                )
+
+                st.plotly_chart(fig_symptoms, use_container_width=True)
+
+                # Show symptom insights
+                st.markdown("#### 📊 Symptom Insights")
+
+                # Most common symptom overall
+                total_symptoms = symptom_by_day[symptom_cols].sum()
+                if total_symptoms.sum() > 0:
+                    most_common_symptom = total_symptoms.idxmax().replace('Symptom_', '').replace('_', ' ')
+                    most_common_count = int(total_symptoms.max())
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Most Common Symptom", most_common_symptom)
+                    with col2:
+                        st.metric("Times Reported", most_common_count)
+                    with col3:
+                        # Find day with most symptoms
+                        symptom_by_day['Total_Symptoms'] = symptom_by_day[symptom_cols].sum(axis=1)
+                        heaviest_day = int(symptom_by_day.loc[symptom_by_day['Total_Symptoms'].idxmax(), 'Period Day'])
+                        st.metric("Day with Most Symptoms", f"Day {heaviest_day}")
+            else:
+                st.info("📝 Start tracking symptoms in your journal entries to see symptom patterns here!")
+        else:
+            st.info("📝 Symptom tracking data will appear here once you log entries with symptoms!")
+
         # --- Raw History Table ---
         st.markdown("---")
 
@@ -1434,9 +1588,20 @@ if st.session_state.get("authentication_status"):
             # Prepare display dataframe with formatted dates
             display_df = st.session_state.history_df.copy()
             if 'Date_Display' in display_df.columns:
+                # Base columns
                 display_columns = ['Date_Display', 'Period Day', 'Summary', 'Emotion Label', 'Confidence Score',
                                  'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score',
                                  'Surprise_Score', 'Disgust_Score', 'Neutral_Score']
+
+                # Add symptom columns if they exist
+                symptom_cols = [
+                    'Symptom_Cramps', 'Symptom_Headache', 'Symptom_Bloating', 'Symptom_Fatigue', 'Symptom_Acne',
+                    'Symptom_Back_Pain', 'Symptom_Nausea', 'Symptom_Breast_Tenderness', 'Symptom_Mood_Swings', 'Symptom_Insomnia'
+                ]
+                for col in symptom_cols:
+                    if col in display_df.columns:
+                        display_columns.append(col)
+
                 display_df = display_df[display_columns]
                 display_df = display_df.rename(columns={'Date_Display': 'Date & Time'})
 
