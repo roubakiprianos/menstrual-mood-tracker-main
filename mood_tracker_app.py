@@ -519,7 +519,8 @@ if st.session_state.get("authentication_status") != True:
     tab1, tab2 = st.tabs(["🔐 Login", "✨ Create Account"])
 
     with tab1:
-        authenticator.login(location='unrendered')
+        st.markdown("### Login to Your Account")
+        authenticator.login(location='main')
 
     with tab2:
         st.markdown("### Create a New Account")
