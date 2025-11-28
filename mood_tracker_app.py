@@ -829,105 +829,106 @@ if st.session_state.get("authentication_status"):
         @media only screen and (max-width: 768px) {
             /* Reduce form padding on mobile */
             .stForm {
-                padding: 1rem !important;
-                margin: 0.5rem 0 !important;
+                padding: 1.5rem;
+                margin: 1rem 0;
             }
 
-            /* Smaller font sizes for mobile */
+            /* Slightly smaller fonts for mobile */
             h1 {
-                font-size: 1.8rem !important;
+                font-size: 2rem;
             }
 
-            h2, h3 {
-                font-size: 1.3rem !important;
+            h2 {
+                font-size: 1.5rem;
             }
 
-            p, span, label {
-                font-size: 0.95rem !important;
+            h3 {
+                font-size: 1.3rem;
             }
 
             /* Make buttons full width on mobile */
             .stButton > button {
-                width: 100% !important;
-                padding: 0.8rem 1rem !important;
-                font-size: 1rem !important;
+                width: 100%;
+                padding: 0.8rem 1.5rem;
             }
 
-            /* Reduce metric font size */
-            [data-testid="stMetricValue"] {
-                font-size: 1.5rem !important;
-            }
-
-            /* Stack columns vertically on mobile */
-            .row-widget.stHorizontal {
-                flex-direction: column !important;
-            }
-
-            /* Reduce spacing */
-            .block-container {
-                padding: 1rem !important;
-                max-width: 100% !important;
-            }
-
-            /* Adjust sidebar for mobile */
-            [data-testid="stSidebar"] {
-                width: 100% !important;
-            }
-
-            /* Better touch targets */
+            /* Better touch targets for inputs */
             input, textarea, select {
-                font-size: 16px !important; /* Prevents zoom on iOS */
-                padding: 0.75rem !important;
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 0.75rem;
             }
 
-            /* Smaller map height on mobile */
+            /* Add spacing around charts to prevent overlap */
             [data-testid="stPlotlyChart"] {
-                height: 300px !important;
+                margin: 1.5rem 0;
+                padding: 0.5rem 0;
+            }
+
+            /* Ensure text doesn't overlap with charts */
+            .element-container {
+                margin-bottom: 1rem;
+            }
+
+            /* Better spacing for expanders */
+            .streamlit-expanderHeader {
+                padding: 1rem;
+                margin: 0.5rem 0;
             }
         }
 
         /* Small phones (below 480px) */
         @media only screen and (max-width: 480px) {
-            h1 {
-                font-size: 1.5rem !important;
-            }
-
-            h2, h3 {
-                font-size: 1.2rem !important;
-            }
-
             .stForm {
-                padding: 0.75rem !important;
+                padding: 1rem;
             }
 
-            [data-testid="stMetricValue"] {
-                font-size: 1.2rem !important;
+            h1 {
+                font-size: 1.7rem;
             }
 
-            /* Even smaller map on very small screens */
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            h3 {
+                font-size: 1.2rem;
+            }
+
+            /* Extra spacing around charts on small screens */
             [data-testid="stPlotlyChart"] {
-                height: 250px !important;
+                margin: 2rem 0;
             }
         }
 
         /* Large screens - optimize for desktop */
         @media only screen and (min-width: 1200px) {
             .block-container {
-                max-width: 1200px !important;
-                margin: 0 auto !important;
+                max-width: 1200px;
+                margin: 0 auto;
             }
         }
 
         /* Ensure images and iframes are responsive */
         img, iframe {
-            max-width: 100% !important;
-            height: auto !important;
+            max-width: 100%;
+            height: auto;
         }
 
         /* Responsive tables */
         .dataframe {
-            overflow-x: auto !important;
-            display: block !important;
+            overflow-x: auto;
+            display: block;
+            margin: 1rem 0;
+        }
+
+        /* Prevent text overlap with any element */
+        div[data-testid="stVerticalBlock"] > div {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Better spacing for markdown elements */
+        .stMarkdown {
+            margin: 0.75rem 0;
         }
     </style>
     """, unsafe_allow_html=True)
