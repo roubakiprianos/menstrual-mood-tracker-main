@@ -36,6 +36,18 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 # 1. CONFIGURATION AND AUTHENTICATION SETUP
 # =======================================================
 
+# --- Initialize Database Connection (needs to be before auth to load users) ---
+@st.cache_resource
+def init_db_connection():
+    try:
+        # Connect using the DATABASE_URL secret
+        conn = psycopg2.connect(st.secrets["DATABASE_URL"])
+        return conn
+    except Exception as e:
+        st.error("Database connection failed. Please check your 'DATABASE_URL' secret/environment variable.")
+        st.error(f"Details: {e}")
+        st.stop()
+
 # --- Load Authentication Configuration from config.yaml or secrets ---
 try:
     # Try to load from Streamlit secrets first (for cloud deployment)
@@ -54,26 +66,6 @@ except FileNotFoundError:
 except Exception as e:
     st.error(f"Error loading configuration: {e}")
     st.stop()
-
-# --- Initialize Authenticator ---
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days']
-)
-
-# --- Initialize Database Connection ---
-@st.cache_resource
-def init_db_connection():
-    try:
-        # Connect using the DATABASE_URL secret
-        conn = psycopg2.connect(st.secrets["DATABASE_URL"])
-        return conn
-    except Exception as e:
-        st.error("Database connection failed. Please check your 'DATABASE_URL' secret/environment variable.")
-        st.error(f"Details: {e}")
-        st.stop()
 
 # --- Load NLP Pipeline (Hugging Face) ---
 @st.cache_resource
@@ -157,8 +149,9 @@ def analyze_emotion(text, emotion_analyzer):
     return top_emotion['label'], top_emotion['score'], results
 
 def create_table_if_not_exists(conn):
-    """Ensures the required database table exists."""
-    CREATE_TABLE_SQL = """
+    """Ensures the required database tables exist."""
+    # Journal entries table
+    CREATE_JOURNAL_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS journal_entries (
         id SERIAL PRIMARY KEY,
         user_id VARCHAR(50) NOT NULL,
@@ -176,9 +169,66 @@ def create_table_if_not_exists(conn):
         neutral_score NUMERIC
     );
     """
+
+    # Users table for registration
+    CREATE_USERS_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        password_hash VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+
     with conn.cursor() as cur:
-        cur.execute(CREATE_TABLE_SQL)
+        cur.execute(CREATE_JOURNAL_TABLE_SQL)
+        cur.execute(CREATE_USERS_TABLE_SQL)
         conn.commit()
+
+def register_user(conn, username, email, name, password_hash):
+    """Register a new user in the database."""
+    query = """
+    INSERT INTO users (username, email, name, password_hash)
+    VALUES (%s, %s, %s, %s)
+    RETURNING id;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, [username, email, name, password_hash])
+            user_id = cur.fetchone()[0]
+            conn.commit()
+        return True, user_id
+    except Exception as e:
+        conn.rollback()
+        if "duplicate key" in str(e).lower():
+            if "username" in str(e).lower():
+                return False, "Username already exists"
+            elif "email" in str(e).lower():
+                return False, "Email already exists"
+        return False, str(e)
+
+def load_users_from_db(conn):
+    """Load all users from database and format for streamlit-authenticator."""
+    query = "SELECT username, email, name, password_hash FROM users;"
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+
+        # Format for streamlit-authenticator
+        users_dict = {}
+        for username, email, name, password_hash in rows:
+            users_dict[username] = {
+                'email': email,
+                'name': name,
+                'password': password_hash
+            }
+        return users_dict
+    except Exception:
+        # If table doesn't exist or error, return empty dict
+        return {}
 
 def calculate_streak(df):
     """Calculate the current logging streak (consecutive days)."""
@@ -436,10 +486,83 @@ def delete_all_user_entries(conn, user_id):
         return False, str(e)
 
 # =======================================================
+# INITIALIZE DATABASE AND LOAD USERS
+# =======================================================
+
+# Initialize database connection and create tables
+conn = init_db_connection()
+create_table_if_not_exists(conn)
+
+# Load users from database and merge with config users
+db_users = load_users_from_db(conn)
+if db_users:
+    # Merge database users with config users (config users take precedence)
+    for username, user_data in db_users.items():
+        if username not in config['credentials']['usernames']:
+            config['credentials']['usernames'][username] = user_data
+
+# Re-initialize authenticator with updated user list
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days']
+)
+
+# =======================================================
 # 2. LOGIN WIDGET AND STATUS CHECK
 # =======================================================
 
-authenticator.login(location='main')
+# Check if user is not authenticated
+if st.session_state.get("authentication_status") != True:
+    # Show login and registration tabs
+    tab1, tab2 = st.tabs(["🔐 Login", "✨ Create Account"])
+
+    with tab1:
+        authenticator.login(location='unrendered')
+
+    with tab2:
+        st.markdown("### Create a New Account")
+        st.markdown("Join to track your menstrual cycle and mood patterns!")
+
+        with st.form("registration_form"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                new_name = st.text_input("Full Name *", placeholder="Enter your name")
+                new_username = st.text_input("Username *", placeholder="Choose a username")
+
+            with col2:
+                new_email = st.text_input("Email *", placeholder="your.email@example.com")
+                new_password = st.text_input("Password *", type="password", placeholder="Choose a password")
+
+            st.markdown("*All fields are required")
+
+            register_button = st.form_submit_button("Create Account", type="primary")
+
+            if register_button:
+                if not all([new_name, new_username, new_email, new_password]):
+                    st.error("❌ Please fill in all fields")
+                elif len(new_password) < 6:
+                    st.error("❌ Password must be at least 6 characters long")
+                elif "@" not in new_email:
+                    st.error("❌ Please enter a valid email address")
+                else:
+                    # Hash the password
+                    import streamlit_authenticator as stauth
+                    hashed_password = stauth.Hasher([new_password]).generate()[0]
+
+                    # Register user in database
+                    success, result = register_user(conn, new_username, new_email, new_name, hashed_password)
+
+                    if success:
+                        st.success(f"✅ Account created successfully! User ID: {result}")
+                        st.info("👉 Please switch to the Login tab to sign in with your new account.")
+                        # Force a rerun to reload users from database
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Registration failed: {result}")
 
 # --- Stop execution if user is not authenticated ---
 if st.session_state.get("authentication_status") == False:
@@ -456,8 +579,7 @@ if st.session_state.get("authentication_status") == None:
 
 if st.session_state.get("authentication_status"):
     # Initialize all resources once login is successful
-    conn = init_db_connection()
-    create_table_if_not_exists(conn)
+    # (conn is already initialized at the top for user authentication)
     emotion_analyzer = load_emotion_pipeline()
 
     # --- Custom CSS for Orange & Purple Styling with Animations ---
