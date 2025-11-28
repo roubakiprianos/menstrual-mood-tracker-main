@@ -942,12 +942,11 @@ if st.session_state.get("authentication_status"):
         user_locations = get_user_locations(conn)
 
         if not user_locations.empty:
-            # Create a more attractive scatter geo map with markers
-            fig = px.scatter_geo(
+            # Create a choropleth map with filled countries
+            fig = px.choropleth(
                 user_locations,
                 locations="country",
                 locationmode="country names",
-                size="user_count",
                 color="user_count",
                 hover_name="country",
                 hover_data={
@@ -957,26 +956,27 @@ if st.session_state.get("authentication_status"):
                 color_continuous_scale=[
                     [0, "#FFE5D9"],      # Light peachy
                     [0.3, "#FFB366"],    # Light orange
-                    [0.6, "#FF6B35"],    # Main orange
-                    [1.0, "#7B68EE"]     # Purple
+                    [0.7, "#FF6B35"],    # Main orange
+                    [1.0, "#C77DFF"]     # Light purple
                 ],
-                size_max=50,
                 labels={"user_count": "👥 Users"}
             )
 
             # Update map styling for better UX
             fig.update_geos(
                 showcountries=True,
-                countrycolor="rgba(200, 200, 200, 0.3)",
+                countrycolor="rgba(180, 180, 180, 0.3)",
+                countrywidth=0.8,
                 showcoastlines=True,
-                coastlinecolor="rgba(150, 150, 150, 0.5)",
+                coastlinecolor="rgba(100, 100, 100, 0.5)",
+                coastlinewidth=1.2,
                 projection_type="natural earth",
                 showland=True,
-                landcolor="rgba(245, 245, 245, 0.8)",
+                landcolor="rgba(248, 248, 248, 1)",
                 showocean=True,
-                oceancolor="rgba(220, 240, 255, 0.6)",
+                oceancolor="rgba(230, 245, 255, 0.9)",
                 showlakes=True,
-                lakecolor="rgba(220, 240, 255, 0.6)",
+                lakecolor="rgba(230, 245, 255, 0.9)",
                 bgcolor="rgba(255, 255, 255, 0)"
             )
 
@@ -986,30 +986,49 @@ if st.session_state.get("authentication_status"):
                 paper_bgcolor="rgba(255, 244, 230, 0.3)",
                 font=dict(family="sans-serif", size=12, color="#5D4E60"),
                 coloraxis_colorbar=dict(
-                    title="Users",
-                    thickness=15,
+                    title="👥 Users",
+                    thickness=18,
                     len=0.7,
-                    bgcolor="rgba(255, 255, 255, 0.8)",
-                    tickfont=dict(size=10)
+                    bgcolor="rgba(255, 255, 255, 0.95)",
+                    tickfont=dict(size=11),
+                    x=1.01,
+                    tickmode='linear',
+                    tick0=0,
+                    dtick=1
                 ),
                 hoverlabel=dict(
                     bgcolor="white",
-                    font_size=14,
-                    font_family="sans-serif"
+                    font_size=15,
+                    font_family="sans-serif",
+                    bordercolor="#FF6B35"
                 )
             )
 
-            # Add country name labels for countries with users
             fig.update_traces(
-                marker=dict(
-                    line=dict(width=2, color='white'),
-                    opacity=0.9
-                ),
-                text=user_locations['country'],
-                textposition="top center",
-                textfont=dict(size=10, color="#FF6B35", family="sans-serif"),
-                mode='markers+text'
+                marker_line_color='#FF6B35',
+                marker_line_width=2.5
             )
+
+            # Add small star markers on top for better visibility when zoomed out
+            import plotly.graph_objects as go
+
+            # Add marker trace on top
+            fig.add_trace(go.Scattergeo(
+                locations=user_locations['country'],
+                locationmode="country names",
+                mode='markers+text',
+                marker=dict(
+                    size=12,
+                    color='#FF6B35',
+                    symbol='star',
+                    line=dict(width=2, color='white')
+                ),
+                text=user_locations['user_count'].astype(str),
+                textfont=dict(size=10, color='white', family='sans-serif'),
+                textposition="middle center",
+                hoverinfo='skip',
+                showlegend=False
+            ))
 
             st.plotly_chart(fig, use_container_width=True, config={
                 'displayModeBar': True,
