@@ -6,3 +6,4 @@ torch
 streamlit-authenticator
 pyyaml
 psycopg2-binary
+bcrypt

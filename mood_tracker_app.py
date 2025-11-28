@@ -8,6 +8,7 @@ import psycopg2
 from psycopg2 import sql
 import datetime
 import warnings
+import bcrypt
 
 # Import pipeline with error handling
 try:
@@ -549,9 +550,8 @@ if st.session_state.get("authentication_status") != True:
                 elif "@" not in new_email:
                     st.error("❌ Please enter a valid email address")
                 else:
-                    # Hash the password
-                    import streamlit_authenticator as stauth
-                    hashed_password = stauth.Hasher([new_password]).generate()[0]
+                    # Hash the password using bcrypt
+                    hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
                     # Register user in database
                     success, result = register_user(conn, new_username, new_email, new_name, hashed_password)
