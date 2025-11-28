@@ -422,6 +422,19 @@ def load_user_history(conn, user_id):
             'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score'
         ])
 
+def delete_all_user_entries(conn, user_id):
+    """Deletes all journal entries for the specified user."""
+    query = "DELETE FROM journal_entries WHERE user_id = %s;"
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, [user_id])
+            deleted_count = cur.rowcount
+            conn.commit()
+        return True, deleted_count
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
+
 # =======================================================
 # 2. LOGIN WIDGET AND STATUS CHECK
 # =======================================================
@@ -669,6 +682,30 @@ if st.session_state.get("authentication_status"):
                 st.sidebar.success(f"🎉 Amazing! You've logged {streak} days in a row!")
         else:
             st.sidebar.info("Log more entries to unlock personalized insights!")
+
+    # --- Reset Data Section ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### ⚙️ Settings")
+
+    with st.sidebar.expander("🗑️ Reset All Data"):
+        st.warning("⚠️ This will permanently delete ALL your journal entries. This action cannot be undone!")
+
+        # Confirmation checkbox
+        confirm_reset = st.checkbox("I understand that this will delete all my data")
+
+        if st.button("🔴 Delete All Entries", disabled=not confirm_reset, type="secondary"):
+            if confirm_reset:
+                success, result = delete_all_user_entries(conn, st.session_state['username'])
+                if success:
+                    st.success(f"✅ Successfully deleted {result} entries!")
+                    # Clear session state to reload empty data
+                    st.session_state.history_df = pd.DataFrame(columns=[
+                        'Date', 'Period Day', 'Summary', 'Emotion Label', 'Confidence Score',
+                        'Joy_Score', 'Sadness_Score', 'Anger_Score', 'Fear_Score', 'Surprise_Score', 'Disgust_Score', 'Neutral_Score'
+                    ])
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error deleting entries: {result}")
 
     # --- App Structure ---
     st.title("🌸 Menstrual Mood Tracker")
