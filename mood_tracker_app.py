@@ -25,7 +25,7 @@ st.set_page_config(
     layout="wide",
     page_title="Menstrual Mood Tracker",
     page_icon="🌸",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"  # Auto-collapses on mobile
 )
 
 # Suppress all warnings
@@ -821,6 +821,113 @@ if st.session_state.get("authentication_status"):
         /* Chart containers with fade-in */
         [data-testid="stPlotlyChart"] {
             animation: fadeIn 0.6s ease-out;
+        }
+
+        /* ==================== MOBILE RESPONSIVE DESIGN ==================== */
+
+        /* Tablets and smaller (below 768px) */
+        @media only screen and (max-width: 768px) {
+            /* Reduce form padding on mobile */
+            .stForm {
+                padding: 1rem !important;
+                margin: 0.5rem 0 !important;
+            }
+
+            /* Smaller font sizes for mobile */
+            h1 {
+                font-size: 1.8rem !important;
+            }
+
+            h2, h3 {
+                font-size: 1.3rem !important;
+            }
+
+            p, span, label {
+                font-size: 0.95rem !important;
+            }
+
+            /* Make buttons full width on mobile */
+            .stButton > button {
+                width: 100% !important;
+                padding: 0.8rem 1rem !important;
+                font-size: 1rem !important;
+            }
+
+            /* Reduce metric font size */
+            [data-testid="stMetricValue"] {
+                font-size: 1.5rem !important;
+            }
+
+            /* Stack columns vertically on mobile */
+            .row-widget.stHorizontal {
+                flex-direction: column !important;
+            }
+
+            /* Reduce spacing */
+            .block-container {
+                padding: 1rem !important;
+                max-width: 100% !important;
+            }
+
+            /* Adjust sidebar for mobile */
+            [data-testid="stSidebar"] {
+                width: 100% !important;
+            }
+
+            /* Better touch targets */
+            input, textarea, select {
+                font-size: 16px !important; /* Prevents zoom on iOS */
+                padding: 0.75rem !important;
+            }
+
+            /* Smaller map height on mobile */
+            [data-testid="stPlotlyChart"] {
+                height: 300px !important;
+            }
+        }
+
+        /* Small phones (below 480px) */
+        @media only screen and (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem !important;
+            }
+
+            h2, h3 {
+                font-size: 1.2rem !important;
+            }
+
+            .stForm {
+                padding: 0.75rem !important;
+            }
+
+            [data-testid="stMetricValue"] {
+                font-size: 1.2rem !important;
+            }
+
+            /* Even smaller map on very small screens */
+            [data-testid="stPlotlyChart"] {
+                height: 250px !important;
+            }
+        }
+
+        /* Large screens - optimize for desktop */
+        @media only screen and (min-width: 1200px) {
+            .block-container {
+                max-width: 1200px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        /* Ensure images and iframes are responsive */
+        img, iframe {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Responsive tables */
+        .dataframe {
+            overflow-x: auto !important;
+            display: block !important;
         }
     </style>
     """, unsafe_allow_html=True)
