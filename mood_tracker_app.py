@@ -929,50 +929,121 @@ if st.session_state.get("authentication_status"):
     """, unsafe_allow_html=True)
 
     # --- World Map of Users ---
-    with st.expander("🌍 Community World Map"):
-        st.markdown("### See where our community members are from!")
+    with st.expander("🌍 Community World Map", expanded=False):
+        st.markdown("""
+        <div style='text-align: center; padding: 0.5rem; margin-bottom: 1rem;'>
+            <h3 style='color: #FF6B35; margin: 0;'>🌏 Global Community Map</h3>
+            <p style='color: #7B68EE; margin: 0.5rem 0 0 0; font-size: 0.9rem;'>
+                Click and drag to explore • Scroll to zoom in/out
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
         user_locations = get_user_locations(conn)
 
         if not user_locations.empty:
-            # Create choropleth map using plotly
-            fig = px.choropleth(
+            # Create a more attractive scatter geo map with markers
+            fig = px.scatter_geo(
                 user_locations,
                 locations="country",
                 locationmode="country names",
+                size="user_count",
                 color="user_count",
                 hover_name="country",
-                hover_data={"user_count": True, "country": False},
-                color_continuous_scale=["#FFF4E6", "#FFB366", "#FF6B35", "#7B68EE"],
-                labels={"user_count": "Users"},
-                title="Users Around the World"
+                hover_data={
+                    "user_count": True,
+                    "country": False
+                },
+                color_continuous_scale=[
+                    [0, "#FFE5D9"],      # Light peachy
+                    [0.3, "#FFB366"],    # Light orange
+                    [0.6, "#FF6B35"],    # Main orange
+                    [1.0, "#7B68EE"]     # Purple
+                ],
+                size_max=50,
+                labels={"user_count": "👥 Users"}
+            )
+
+            # Update map styling for better UX
+            fig.update_geos(
+                showcountries=True,
+                countrycolor="rgba(200, 200, 200, 0.3)",
+                showcoastlines=True,
+                coastlinecolor="rgba(150, 150, 150, 0.5)",
+                projection_type="natural earth",
+                showland=True,
+                landcolor="rgba(245, 245, 245, 0.8)",
+                showocean=True,
+                oceancolor="rgba(220, 240, 255, 0.6)",
+                showlakes=True,
+                lakecolor="rgba(220, 240, 255, 0.6)",
+                bgcolor="rgba(255, 255, 255, 0)"
             )
 
             fig.update_layout(
-                geo=dict(
-                    showframe=False,
-                    showcoastlines=True,
-                    projection_type='natural earth'
+                height=500,
+                margin={"r":10,"t":10,"l":10,"b":10},
+                paper_bgcolor="rgba(255, 244, 230, 0.3)",
+                font=dict(family="sans-serif", size=12, color="#5D4E60"),
+                coloraxis_colorbar=dict(
+                    title="Users",
+                    thickness=15,
+                    len=0.7,
+                    bgcolor="rgba(255, 255, 255, 0.8)",
+                    tickfont=dict(size=10)
                 ),
-                height=400,
-                margin={"r":0,"t":30,"l":0,"b":0}
+                hoverlabel=dict(
+                    bgcolor="white",
+                    font_size=14,
+                    font_family="sans-serif"
+                )
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            # Add country name labels for countries with users
+            fig.update_traces(
+                marker=dict(
+                    line=dict(width=2, color='white'),
+                    opacity=0.9
+                ),
+                text=user_locations['country'],
+                textposition="top center",
+                textfont=dict(size=10, color="#FF6B35", family="sans-serif"),
+                mode='markers+text'
+            )
 
-            # Show statistics
+            st.plotly_chart(fig, use_container_width=True, config={
+                'displayModeBar': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
+                'scrollZoom': True
+            })
+
+            # Show statistics with more detail
             total_users = user_locations['user_count'].sum()
             total_countries = len(user_locations)
-            st.markdown(f"""
-            <div style='text-align: center; padding: 1rem; background: linear-gradient(135deg, #FFF4E6 0%, #F3E5F5 100%);
-                        border-radius: 10px; margin-top: 1rem;'>
-                <p style='margin: 0; color: #5D4E60; font-weight: 500;'>
-                    🌏 <strong>{total_users}</strong> users from <strong>{total_countries}</strong> countries
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+
+            # Top countries
+            top_countries = user_locations.nlargest(3, 'user_count')
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("👥 Total Users", f"{total_users}")
+            with col2:
+                st.metric("🌍 Countries", f"{total_countries}")
+            with col3:
+                if len(top_countries) > 0:
+                    top_country = top_countries.iloc[0]
+                    st.metric("🏆 Top Country", f"{top_country['country']}")
+
+            # Show top countries list
+            if len(top_countries) > 0:
+                st.markdown("**📊 Most Active Countries:**")
+                for idx, row in top_countries.iterrows():
+                    user_word = "user" if row['user_count'] == 1 else "users"
+                    st.markdown(f"• **{row['country']}**: {int(row['user_count'])} {user_word}")
+
         else:
-            st.info("No users have shared their location yet. Be the first to add your country during registration!")
+            st.info("🌟 No users have shared their location yet. Be the first to add your country during registration and appear on the map!")
 
     with st.expander("❓ How the Emotion Analysis Works"):
         st.markdown("""
