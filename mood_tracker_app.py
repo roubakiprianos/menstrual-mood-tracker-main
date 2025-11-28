@@ -179,25 +179,40 @@ def create_table_if_not_exists(conn):
         email VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(100) NOT NULL,
         password_hash VARCHAR(100) NOT NULL,
+        country VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    """
+
+    # Add country column if it doesn't exist (for existing tables)
+    ADD_COUNTRY_COLUMN_SQL = """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='users' AND column_name='country'
+        ) THEN
+            ALTER TABLE users ADD COLUMN country VARCHAR(100);
+        END IF;
+    END $$;
     """
 
     with conn.cursor() as cur:
         cur.execute(CREATE_JOURNAL_TABLE_SQL)
         cur.execute(CREATE_USERS_TABLE_SQL)
+        cur.execute(ADD_COUNTRY_COLUMN_SQL)
         conn.commit()
 
-def register_user(conn, username, email, name, password_hash):
+def register_user(conn, username, email, name, password_hash, country=None):
     """Register a new user in the database."""
     query = """
-    INSERT INTO users (username, email, name, password_hash)
-    VALUES (%s, %s, %s, %s)
+    INSERT INTO users (username, email, name, password_hash, country)
+    VALUES (%s, %s, %s, %s, %s)
     RETURNING id;
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query, [username, email, name, password_hash])
+            cur.execute(query, [username, email, name, password_hash, country])
             user_id = cur.fetchone()[0]
             conn.commit()
         return True, user_id
@@ -230,6 +245,21 @@ def load_users_from_db(conn):
     except Exception:
         # If table doesn't exist or error, return empty dict
         return {}
+
+def get_user_locations(conn):
+    """Get user locations for world map visualization."""
+    query = "SELECT country, COUNT(*) as user_count FROM users WHERE country IS NOT NULL GROUP BY country;"
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+
+        # Create DataFrame for map
+        df = pd.DataFrame(rows, columns=['country', 'user_count'])
+        return df
+    except Exception:
+        # If table doesn't exist or error, return empty DataFrame
+        return pd.DataFrame(columns=['country', 'user_count'])
 
 def calculate_streak(df):
     """Calculate the current logging streak (consecutive days)."""
@@ -538,13 +568,45 @@ if st.session_state.get("authentication_status") != True:
                 new_email = st.text_input("Email *", placeholder="your.email@example.com")
                 new_password = st.text_input("Password *", type="password", placeholder="Choose a password")
 
-            st.markdown("*All fields are required")
+            # Country selector
+            countries = [
+                "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia", "Australia",
+                "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium",
+                "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei",
+                "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde",
+                "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo",
+                "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica",
+                "Dominican Republic", "East Timor", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea",
+                "Eritrea", "Estonia", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia",
+                "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+                "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+                "Israel", "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya",
+                "Kiribati", "North Korea", "South Korea", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon",
+                "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Macedonia",
+                "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands",
+                "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia",
+                "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands",
+                "New Zealand", "Nicaragua", "Niger", "Nigeria", "Norway", "Oman", "Pakistan", "Palau",
+                "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar",
+                "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia",
+                "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+                "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia",
+                "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka",
+                "Sudan", "Suriname", "Swaziland", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan",
+                "Tanzania", "Thailand", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey",
+                "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom",
+                "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+                "Yemen", "Zambia", "Zimbabwe"
+            ]
+            new_country = st.selectbox("🌍 Country (Optional)", [""] + countries, help="Select your country to appear on the world map!")
+
+            st.markdown("*Name, Username, Email, and Password are required")
 
             register_button = st.form_submit_button("Create Account", type="primary")
 
             if register_button:
                 if not all([new_name, new_username, new_email, new_password]):
-                    st.error("❌ Please fill in all fields")
+                    st.error("❌ Please fill in all required fields")
                 elif len(new_password) < 6:
                     st.error("❌ Password must be at least 6 characters long")
                 elif "@" not in new_email:
@@ -553,8 +615,11 @@ if st.session_state.get("authentication_status") != True:
                     # Hash the password using bcrypt
                     hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
+                    # Use None if no country selected
+                    country_to_save = new_country if new_country else None
+
                     # Register user in database
-                    success, result = register_user(conn, new_username, new_email, new_name, hashed_password)
+                    success, result = register_user(conn, new_username, new_email, new_name, hashed_password, country_to_save)
 
                     if success:
                         st.success(f"✅ Account created successfully! User ID: {result}")
@@ -862,6 +927,52 @@ if st.session_state.get("authentication_status"):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # --- World Map of Users ---
+    with st.expander("🌍 Community World Map"):
+        st.markdown("### See where our community members are from!")
+
+        user_locations = get_user_locations(conn)
+
+        if not user_locations.empty:
+            # Create choropleth map using plotly
+            fig = px.choropleth(
+                user_locations,
+                locations="country",
+                locationmode="country names",
+                color="user_count",
+                hover_name="country",
+                hover_data={"user_count": True, "country": False},
+                color_continuous_scale=["#FFF4E6", "#FFB366", "#FF6B35", "#7B68EE"],
+                labels={"user_count": "Users"},
+                title="Users Around the World"
+            )
+
+            fig.update_layout(
+                geo=dict(
+                    showframe=False,
+                    showcoastlines=True,
+                    projection_type='natural earth'
+                ),
+                height=400,
+                margin={"r":0,"t":30,"l":0,"b":0}
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Show statistics
+            total_users = user_locations['user_count'].sum()
+            total_countries = len(user_locations)
+            st.markdown(f"""
+            <div style='text-align: center; padding: 1rem; background: linear-gradient(135deg, #FFF4E6 0%, #F3E5F5 100%);
+                        border-radius: 10px; margin-top: 1rem;'>
+                <p style='margin: 0; color: #5D4E60; font-weight: 500;'>
+                    🌏 <strong>{total_users}</strong> users from <strong>{total_countries}</strong> countries
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("No users have shared their location yet. Be the first to add your country during registration!")
 
     with st.expander("❓ How the Emotion Analysis Works"):
         st.markdown("""
